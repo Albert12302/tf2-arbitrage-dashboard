@@ -128,6 +128,7 @@ export function buildItemSku(item: BackpackTfItem): string {
     item.australium ? "aus" : "std",
     `ks${item.killstreak_tier}`,
     item.particle ? `pe${item.particle.id}` : "pe0",
+    item.craftable ? "craft" : "nocraft",
   ];
   return parts.join("::");
 }

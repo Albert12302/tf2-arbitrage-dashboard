@@ -10,5 +10,9 @@
     "worker:dev": "npm run dev --workspace=worker",
     "frontend:dev": "npm run dev --workspace=frontend",
     "typecheck": "npm run typecheck --workspace=worker && npm run typecheck --workspace=frontend"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.6",
+    "@supabase/supabase-js": "^2.115.0"
   }
 }
