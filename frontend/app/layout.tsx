@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("font-sans")}>
       <body className="bg-black text-zinc-100 antialiased">{children}</body>
     </html>
   );
