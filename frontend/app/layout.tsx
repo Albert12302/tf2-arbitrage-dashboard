@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
+// Next.js processes this global stylesheet; TypeScript has no CSS module declaration here.
+// @ts-expect-error -- global CSS is supported by Next.js at build time.
 import "./globals.css";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "TF2 Arbitrage Dashboard",
