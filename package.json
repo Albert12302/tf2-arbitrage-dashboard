@@ -1,0 +1,14 @@
+{
+  "name": "tf2-arbitrage-dashboard",
+  "private": true,
+  "workspaces": [
+    "worker",
+    "frontend",
+    "shared"
+  ],
+  "scripts": {
+    "worker:dev": "npm run dev --workspace=worker",
+    "frontend:dev": "npm run dev --workspace=frontend",
+    "typecheck": "npm run typecheck --workspace=worker && npm run typecheck --workspace=frontend"
+  }
+}

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Env files — never commit real secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.local.example
+
+# Build output
+worker/dist/
+frontend/.next/
+frontend/out/
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+.vercel/
