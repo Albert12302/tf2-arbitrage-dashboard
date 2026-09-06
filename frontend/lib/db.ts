@@ -10,7 +10,10 @@ function getPool(): Pool {
     if (!connectionString) {
       throw new Error("Missing required env var: DATABASE_URL");
     }
-    pool = new Pool({ connectionString });
+    pool = new Pool({
+      connectionString,
+      ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+    });
   }
   return pool;
 }

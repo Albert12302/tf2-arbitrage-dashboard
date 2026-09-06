@@ -1,8 +1,66 @@
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --color-background: oklch(from var(--background) l c h);
+  --color-foreground: oklch(from var(--foreground) l c h);
+  --color-card: oklch(from var(--card) l c h);
+  --color-card-foreground: oklch(from var(--card-foreground) l c h);
+  --color-popover: oklch(from var(--popover) l c h);
+  --color-popover-foreground: oklch(from var(--popover-foreground) l c h);
+  --color-primary: oklch(from var(--primary) l c h);
+  --color-primary-foreground: oklch(from var(--primary-foreground) l c h);
+  --color-secondary: oklch(from var(--secondary) l c h);
+  --color-secondary-foreground: oklch(from var(--secondary-foreground) l c h);
+  --color-muted: oklch(from var(--muted) l c h);
+  --color-muted-foreground: oklch(from var(--muted-foreground) l c h);
+  --color-accent: oklch(from var(--accent) l c h);
+  --color-accent-foreground: oklch(from var(--accent-foreground) l c h);
+  --color-destructive: oklch(from var(--destructive) l c h);
+  --color-border: oklch(from var(--border) l c h);
+  --color-input: oklch(from var(--input) l c h);
+  --color-ring: oklch(from var(--ring) l c h);
+
+  --color-chart-1: oklch(from var(--chart-1) l c h);
+  --color-chart-2: oklch(from var(--chart-2) l c h);
+  --color-chart-3: oklch(from var(--chart-3) l c h);
+  --color-chart-4: oklch(from var(--chart-4) l c h);
+  --color-chart-5: oklch(from var(--chart-5) l c h);
+
+  --color-sidebar: oklch(from var(--sidebar) l c h);
+  --color-sidebar-foreground: oklch(from var(--sidebar-foreground) l c h);
+  --color-sidebar-primary: oklch(from var(--sidebar-primary) l c h);
+  --color-sidebar-primary-foreground: oklch(
+    from var(--sidebar-primary-foreground) l c h
+  );
+  --color-sidebar-accent: oklch(from var(--sidebar-accent) l c h);
+  --color-sidebar-accent-foreground: oklch(
+    from var(--sidebar-accent-foreground) l c h
+  );
+  --color-sidebar-border: oklch(from var(--sidebar-border) l c h);
+  --color-sidebar-ring: oklch(from var(--sidebar-ring) l c h);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 @layer base {
   .theme {
