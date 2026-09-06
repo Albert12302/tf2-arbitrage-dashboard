@@ -10,7 +10,13 @@ import { OrderBook } from "./order-book";
 import { convertToMetal } from "./key-price";
 import { DealsRepository } from "./db";
 
-const MAX_LISTING_AGE_MS = 8 * 60 * 60 * 1000; // see OrderBook.pruneStale for why
+// Was 8h — tightened after a stale sell listing (its bot had gone offline, no
+// listing-delete ever arrived) sat in the order book long enough to produce a
+// double-digit-percent phantom "opportunity" against a real, current buy order.
+// Shorter TTL narrows that ghost-listing exposure window; the tradeoff is a
+// genuinely live but quiet listing can now get pruned and briefly vanish from
+// the table until its next event. See OrderBook.pruneStale for the full tradeoff.
+const MAX_LISTING_AGE_MS = 60 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 15 * 60 * 1000;
 
 function assertEnv(name: string): string {
@@ -37,6 +43,7 @@ function normalizeListing(
     killstreakTier: payload.item.killstreakTier ?? 0,
     particleEffect: payload.item.particle?.name ?? null,
     priceMetal,
+    currencies: payload.currencies,
     lastSeenAt: Date.now(),
   };
 }
@@ -49,10 +56,25 @@ async function reconcileSku(
   const bestBuy = orderBook.getBestBuy(sku);
   const bestSell = orderBook.getBestSell(sku);
 
-  const isProfitable =
-    bestBuy !== null && bestSell !== null && bestBuy.priceMetal > bestSell.priceMetal;
+  if (!bestBuy || !bestSell) {
+    await deals.deleteIfPresent(sku);
+    return;
+  }
 
-  if (!isProfitable || !bestBuy || !bestSell) {
+  // Each listing's own priceMetal was baked in whenever ITS event arrived,
+  // against whatever the tracked key rate was at that instant — which can be
+  // hours apart for the buy side vs. the sell side. Two listings priced
+  // identically in keys (e.g. both "12.03 keys") can end up with different
+  // priceMetal purely from rate drift between those two moments, which reads
+  // as a profitable spread that doesn't actually exist. Re-converting both
+  // sides right here, back-to-back, means they both go through the exact
+  // same rate snapshot — identically-keyed listings now correctly compare
+  // as equal instead of manufacturing a phantom opportunity.
+  const buyMetal = convertToMetal(bestBuy.currencies, orderBook);
+  const sellMetal = convertToMetal(bestSell.currencies, orderBook);
+  const isProfitable = buyMetal !== null && sellMetal !== null && buyMetal > sellMetal;
+
+  if (!isProfitable || buyMetal === null || sellMetal === null) {
     await deals.deleteIfPresent(sku);
     return;
   }
@@ -65,10 +87,10 @@ async function reconcileSku(
     is_australium: bestBuy.isAustralium,
     killstreak_tier: bestBuy.killstreakTier,
     particle_effect: bestBuy.particleEffect,
-    highest_buy_metal: bestBuy.priceMetal,
+    highest_buy_metal: buyMetal,
     highest_buy_listing_id: bestBuy.listingId,
     highest_buy_steamid: bestBuy.steamId,
-    lowest_sell_metal: bestSell.priceMetal,
+    lowest_sell_metal: sellMetal,
     lowest_sell_listing_id: bestSell.listingId,
     lowest_sell_steamid: bestSell.steamId,
   });

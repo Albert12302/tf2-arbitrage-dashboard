@@ -20,3 +20,7 @@ To ensure the project succeeds on free-tier infrastructure and stands out to tec
 - **TypeScript Typing:** Provide explicit TypeScript interfaces for the backpack.tf WebSocket payload schemas and database rows. No lazy `any` types.
 - **Component Presentation:** When writing frontend code, design UI layouts utilizing Shadcn components (`Table`, `Badge`, `Card`) with clean typography suitable for showcasing to tech recruiters.
   Please confirm you understand these constraints. Let's begin by generating the absolute first step: [Insert the step you want to work on, e.g., the SQL database schema script / the Node.js WebSocket boilerplate].
+
+  ONLY WORK within the tf2-arbitrage-dashboard don't make any changes outside of this folder
+
+have you done all this: check keys in git, protect admin routes, add auth, check user perms, sanitize user inputs, protect againsr XSS, sql injection proect, check db rules, add rate limiting, set spend cap, secure file oplaods, csrf protction, check cors settings, enable HTTPS, add security headers, secure cookies disaable debug mode, check prod settings
