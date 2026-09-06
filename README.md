@@ -24,6 +24,16 @@ backpack.tf WS → worker/ (Render) → Postgres (Supabase/Neon) → frontend/ (
                        ↑___________________ shared/types.ts __________________↑
 ```
 
+## Screenshots
+
+Live dashboard, sorted by profit margin (best opportunities first):
+
+![Dashboard overview](docs/dashboard-overview.png)
+
+Sortable, paginated table of every currently profitable item:
+
+![Dashboard pagination](docs/dashboard-pagination.png)
+
 ## Local setup
 
 The backpack.tf WebSocket feed is public — no API key or account needed. The
