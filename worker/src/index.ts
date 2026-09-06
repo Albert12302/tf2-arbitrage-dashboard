@@ -1,7 +1,6 @@
 import "dotenv/config";
 import type {
   BackpackTfListingEvent,
-  BackpackTfListingDeleteEvent,
   BackpackTfSocketMessage,
   NormalizedListing,
 } from "@tf2-arb/shared";
@@ -114,7 +113,7 @@ async function handleMessage(
   deals: DealsRepository
 ): Promise<void> {
   if (message.event === "listing-update") {
-    const payload = message.payload as BackpackTfListingEvent;
+    const payload = message.payload;
     if (!isTrackableVariant(payload.item)) return; // name tag/spells/extra strange parts — doesn't fold into item_sku
 
     const priceMetal = convertToMetal(payload.currencies, orderBook);
@@ -127,7 +126,7 @@ async function handleMessage(
   }
 
   if (message.event === "listing-delete") {
-    const payload = message.payload as BackpackTfListingDeleteEvent;
+    const payload = message.payload;
     const affectedSku = orderBook.removeListing(payload.id);
     if (affectedSku) {
       await reconcileSku(affectedSku, orderBook, deals);

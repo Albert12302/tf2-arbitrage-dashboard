@@ -12,6 +12,13 @@ import WebSocket from "ws";
 import type { BackpackTfSocketMessage } from "@tf2-arb/shared";
 
 const MAX_BACKOFF_MS = 30_000;
+// backpack.tf's feed is a constant firehose across all of TF2 — total
+// silence this long means the connection has gone dead without ever
+// sending a close frame (observed: TCP stays ESTABLISHED, no errors, no
+// messages), so `ws`'s "close" event never fires and we'd sit there
+// forever. Force-close and reconnect instead of waiting for one.
+const IDLE_TIMEOUT_MS = 90_000;
+const IDLE_CHECK_INTERVAL_MS = 15_000;
 
 export function connectBackpackSocket(
   url: string,
@@ -24,13 +31,29 @@ export function connectBackpackSocket(
       headers: { "batch-test": "true" },
     });
 
+    let lastMessageAt = Date.now();
+    const idleCheck = setInterval(() => {
+      if (Date.now() - lastMessageAt > IDLE_TIMEOUT_MS) {
+        console.warn(
+          `[worker] websocket idle for over ${IDLE_TIMEOUT_MS}ms, terminating stale connection`
+        );
+        ws.terminate();
+      }
+    }, IDLE_CHECK_INTERVAL_MS);
+
     ws.on("open", () => {
       console.log("[worker] websocket connected");
       backoffMs = 1_000; // reset backoff on a clean connect
+      lastMessageAt = Date.now();
     });
 
     ws.on("message", (raw) => {
-      let events: BackpackTfSocketMessage[];
+      lastMessageAt = Date.now();
+      // JSON.parse hands back `any` — this is genuinely untrusted external
+      // input, so the raw shape is only assumed to have an `event` string;
+      // everything past that is validated below before we trust it as a
+      // BackpackTfSocketMessage.
+      let events: Array<{ event: string; payload: unknown }>;
       try {
         events = JSON.parse(raw.toString());
       } catch (err) {
@@ -40,7 +63,7 @@ export function connectBackpackSocket(
 
       for (const event of events) {
         if (event.event === "listing-update" || event.event === "listing-delete") {
-          onMessage(event);
+          onMessage(event as BackpackTfSocketMessage);
         } else {
           console.warn("[worker] unhandled socket event", event.event, event.payload);
         }
@@ -55,6 +78,7 @@ export function connectBackpackSocket(
     });
 
     ws.on("close", (code, reason) => {
+      clearInterval(idleCheck);
       console.warn(
         `[worker] websocket closed (code ${code}, reason "${reason.toString() || "none"}"), reconnecting in ${backoffMs}ms`
       );
