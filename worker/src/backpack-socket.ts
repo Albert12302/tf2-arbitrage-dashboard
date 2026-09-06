@@ -41,14 +41,23 @@ export function connectBackpackSocket(
       for (const event of events) {
         if (event.event === "listing-update" || event.event === "listing-delete") {
           onMessage(event);
+        } else {
+          console.warn("[worker] unhandled socket event", event.event, event.payload);
         }
-        // buffer-limit-exceeded / client-limit-exceeded events are ignored
-        // for now — see backpack.tf docs if you need to surface these.
       }
     });
 
-    ws.on("close", () => {
-      console.warn(`[worker] websocket closed, reconnecting in ${backoffMs}ms`);
+    ws.on("unexpected-response", (_req, res) => {
+      console.error(
+        `[worker] websocket handshake rejected: HTTP ${res.statusCode}`,
+        res.headers
+      );
+    });
+
+    ws.on("close", (code, reason) => {
+      console.warn(
+        `[worker] websocket closed (code ${code}, reason "${reason.toString() || "none"}"), reconnecting in ${backoffMs}ms`
+      );
       setTimeout(connect, backoffMs);
       backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
     });

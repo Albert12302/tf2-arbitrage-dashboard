@@ -46,18 +46,57 @@ export interface BackpackTfCurrencies {
   metal?: number;
 }
 
+export interface BackpackTfItemQuality {
+  id: number;
+  name: string;
+  color?: string;
+}
+
 export interface BackpackTfItem {
   name: string;
-  quality: number;
-  quality_name: string;
-  killstreak_tier: number;
-  australium: boolean;
+  quality: BackpackTfItemQuality;
+  // Omitted entirely by the live socket when not killstreak/australium,
+  // rather than sent as an explicit 0/false — always read through a
+  // `?? 0` / `?? false` default, never assume presence. Note: camelCase
+  // on the wire, unlike most other item fields (confirmed via a live
+  // payload capture — the docs/assumed snake_case shape was wrong here).
+  killstreakTier?: number;
+  australium?: boolean;
   particle?: {
     id: number;
     name: string;
   };
   craftable: boolean;
   tradable: boolean;
+
+  // Value-affecting customizations. paint/sheen/killstreaker each have a
+  // small enumerable set of values, so they're folded straight into
+  // item_sku (see buildItemSku) — a Team Spirit item only ever matches
+  // another Team Spirit item. spells/customName/extra strange parts don't
+  // fold in as cleanly (spells stack in combinations, name tags are
+  // freeform text) so listings carrying those are excluded from tracking
+  // entirely instead (see isTrackableVariant).
+  paint?: { id: number; name: string; color?: string }; // confirmed via live capture
+  sheen?: { id: number; name: string }; // confirmed via live capture
+  killstreaker?: { id: number; name: string }; // confirmed via live capture
+  customName?: string; // name tag applied — confirmed via live capture
+  killEaters?: unknown[]; // >1 entry means a Strange Part is attached beyond the item's own built-in counter
+  spells?: unknown[]; // Halloween Spells — confirmed via live capture
+}
+
+/**
+ * False for a listing carrying a customization that doesn't fold cleanly
+ * into item_sku — a name tag (freeform text), Halloween Spells (they
+ * stack in combinations), or an attached Strange Part beyond the item's
+ * own built-in counter. Paint/sheen/killstreaker are NOT excluded here;
+ * they're folded into the SKU itself so matching variants still compare
+ * correctly against each other.
+ */
+export function isTrackableVariant(item: BackpackTfItem): boolean {
+  if (item.customName) return false;
+  if (item.spells && item.spells.length > 0) return false;
+  if (item.killEaters && item.killEaters.length > 1) return false;
+  return true;
 }
 
 // ============================================================================
@@ -76,6 +115,9 @@ export interface NormalizedListing {
   killstreakTier: number;
   particleEffect: string | null;
   priceMetal: number;
+  /** Epoch ms when the worker last received an event for this listing —
+   *  used to prune listings that went silent without a listing-delete. */
+  lastSeenAt: number;
 }
 
 export interface OrderBookSide {
@@ -124,11 +166,14 @@ export type DealUpsertInput = Omit<
 export function buildItemSku(item: BackpackTfItem): string {
   const parts = [
     item.name,
-    `q${item.quality}`,
+    `q${item.quality.id}`,
     item.australium ? "aus" : "std",
-    `ks${item.killstreak_tier}`,
+    `ks${item.killstreakTier ?? 0}`,
     item.particle ? `pe${item.particle.id}` : "pe0",
     item.craftable ? "craft" : "nocraft",
+    item.paint ? `pt${item.paint.id}` : "pt0",
+    item.sheen ? `sh${item.sheen.id}` : "sh0",
+    item.killstreaker ? `kr${item.killstreaker.id}` : "kr0",
   ];
   return parts.join("::");
 }

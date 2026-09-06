@@ -26,6 +26,18 @@ export class DealsRepository {
     });
   }
 
+  /** Seeds presentSkus from the DB's actual current rows. Must be called
+   *  once after construction — without it, a fresh process (after any
+   *  restart) starts believing no rows exist, so deleteIfPresent silently
+   *  skips real rows left over from before the restart and they never
+   *  get cleaned up once they stop being profitable. */
+  async init(): Promise<void> {
+    const result = await this.pool.query<{ item_sku: string }>("SELECT item_sku FROM deals");
+    for (const row of result.rows) {
+      this.presentSkus.add(row.item_sku);
+    }
+  }
+
   async upsert(deal: DealUpsertInput): Promise<void> {
     if (deal.highest_buy_metal <= deal.lowest_sell_metal) {
       // Not actually profitable — caller should have called delete() instead.

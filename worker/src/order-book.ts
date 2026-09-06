@@ -61,6 +61,36 @@ export class OrderBook {
     return this.pickBest(this.sells.get(sku), (a, b) => a.priceMetal < b.priceMetal);
   }
 
+  /**
+   * Removes listings we haven't received a fresh event for in `maxAgeMs`.
+   *
+   * backpack.tf only fires listing-update on creation, a price change, or
+   * an intent change — a plain "bump" refresh does NOT re-trigger it. So a
+   * listing that's silently removed (its bot goes offline, it expires,
+   * etc.) can linger here forever with no listing-delete ever arriving.
+   * Polling the REST API to reconcile against ground truth is off the
+   * table (zero-polling guardrail), so this TTL is the only backstop —
+   * accepting the tradeoff that a listing which is still genuinely live
+   * but has gone this long without any activity also gets dropped.
+   *
+   * Returns the affected SKUs so the caller can re-reconcile them.
+   */
+  pruneStale(maxAgeMs: number): string[] {
+    const cutoff = Date.now() - maxAgeMs;
+    const affectedSkus = new Set<string>();
+
+    for (const [listingId, location] of this.listingIndex) {
+      const book = location.intent === "buy" ? this.buys : this.sells;
+      const listing = book.get(location.sku)?.get(listingId);
+      if (listing && listing.lastSeenAt < cutoff) {
+        this.removeListing(listingId);
+        affectedSkus.add(location.sku);
+      }
+    }
+
+    return [...affectedSkus];
+  }
+
   private pickBest(
     bySku: Map<string, NormalizedListing> | undefined,
     isBetter: (a: NormalizedListing, b: NormalizedListing) => boolean

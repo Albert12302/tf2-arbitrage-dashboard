@@ -17,9 +17,8 @@ import type { OrderBook } from "./order-book";
 
 const KEY_ITEM: BackpackTfItem = {
   name: "Mann Co. Supply Crate Key",
-  quality: 6,
-  quality_name: "Unique",
-  killstreak_tier: 0,
+  quality: { id: 6, name: "Unique" },
+  killstreakTier: 0,
   australium: false,
   craftable: true,
   tradable: true,
