@@ -26,15 +26,86 @@ backpack.tf WS → worker/ (Render) → Postgres (Supabase/Neon) → frontend/ (
 
 ## Local setup
 
+The backpack.tf WebSocket feed is public — no API key or account needed. The
+only thing you need to provide yourself is a Postgres database.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20 or later, and npm (bundled with Node)
+- [git](https://git-scm.com/)
+- A free Postgres database — [Supabase](https://supabase.com/) or
+  [Neon](https://neon.tech/) both work
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/Albert12302/tf2-arbitrage-dashboard.git
+cd tf2-arbitrage-dashboard
+```
+
+### 2. Create a free Postgres database
+
+Using Supabase (Neon is a similar flow):
+
+1. Sign up at [supabase.com](https://supabase.com/) and create a new project.
+2. Once it's provisioned, go to **Project Settings → Database → Connection
+   string** and copy the **URI** (direct connection, not the pooler).
+3. In Supabase's **SQL Editor**, paste the contents of
+   [`database/schema.sql`](database/schema.sql) and run it once. This creates
+   the `deals` table the worker writes to and the frontend reads from.
+
+Optional but recommended: create a second, read-only Postgres role for the
+frontend to use (`CREATE ROLE ... WITH LOGIN; GRANT SELECT ON deals TO ...;`),
+so the dashboard can never accidentally write to `deals`. The worker's
+connection string needs write access; the frontend's doesn't.
+
+### 3. Configure environment variables
+
 ```bash
 npm install                 # installs all three workspaces from the root
 cp worker/.env.example worker/.env
 cp frontend/.env.local.example frontend/.env.local
-# fill in DATABASE_URL in both files (see each .env.example for details)
-
-npm run worker:dev          # runs the ingestion worker locally
-npm run frontend:dev        # runs the dashboard locally on localhost:3000
 ```
+
+Then edit both files:
+
+- `worker/.env` — set `DATABASE_URL` to your Supabase/Neon connection string
+  (the write-capable one). `BACKPACK_TF_WS_URL` already has a working default
+  and doesn't need to change.
+- `frontend/.env.local` — set `DATABASE_URL` to the same database, ideally
+  using the read-only role from step 2.
+
+### 4. Run it
+
+In two separate terminals:
+
+```bash
+npm run worker:dev          # starts the ingestion worker
+```
+
+```bash
+npm run frontend:dev        # starts the dashboard on http://localhost:3000
+```
+
+You should see `[worker] booting` and `[worker] will connect to
+wss://ws.backpack.tf/events` in the worker's terminal — that means it
+connected to backpack.tf and your database successfully. Open
+[http://localhost:3000](http://localhost:3000) to see the dashboard; rows
+appear once the worker detects a profitable buy/sell spread on some item,
+which can take a few minutes depending on market activity.
+
+### Troubleshooting
+
+- `Missing required env var: DATABASE_URL` — the corresponding `.env`
+  file is missing, in the wrong folder, or the variable name is misspelled.
+- Connection errors mentioning SSL — Supabase and Neon both require SSL;
+  both `worker/src/db.ts` and `frontend/lib/db.ts` already request it by
+  default, so this usually means the connection string itself is wrong
+  (bad host/port/password).
+- Worker runs but the dashboard stays empty — normal at first. Rows only
+  appear once a real buy price exceeds a real sell price for the same item
+  on backpack.tf; check the worker's terminal for `[worker] fatal error` or
+  repeated `failed to handle message` logs if it seems stuck.
 
 ## Deployment
 
@@ -44,7 +115,3 @@ npm run frontend:dev        # runs the dashboard locally on localhost:3000
 - **Database**: run `database/schema.sql` once against your Supabase/Neon
   instance, then set `DATABASE_URL` as an env var on both Render and Vercel.
 
-## Status
-
-🚧 Early scaffolding — worker and frontend are stubs. See commit history for
-progress.
