@@ -123,8 +123,19 @@ const KILLSTREAK_NAME_PREFIXES: Record<number, string> = {
 function statsPageItemName(deal: DealRow): { name: string; seriesNumber: string | null } {
   let name = deal.item_name;
   if (name.startsWith("Non-Craftable ")) name = name.slice("Non-Craftable ".length);
-  const qualityPrefix = `${deal.quality_name} `;
-  if (name.startsWith(qualityPrefix)) name = name.slice(qualityPrefix.length);
+
+  // Unusuals prefix the particle effect's name onto the item, not the word
+  // "Unusual" (e.g. "Sunbeams Mann-O-War") — confirmed against a real working
+  // link (Purple Energy = 10 -> ".../Unusual/Galvanized%20Gibus/.../10", base
+  // name never includes the effect). Every other quality prefixes its own
+  // name instead (e.g. "Strange Killstreak Shotgun").
+  if (deal.quality_name === "Unusual" && deal.particle_effect) {
+    const particlePrefix = `${deal.particle_effect} `;
+    if (name.startsWith(particlePrefix)) name = name.slice(particlePrefix.length);
+  } else {
+    const qualityPrefix = `${deal.quality_name} `;
+    if (name.startsWith(qualityPrefix)) name = name.slice(qualityPrefix.length);
+  }
   const killstreakPrefix = KILLSTREAK_NAME_PREFIXES[deal.killstreak_tier];
 
   if (killstreakPrefix && name.startsWith(killstreakPrefix)) {
