@@ -54,11 +54,17 @@ export class OrderBook {
   }
 
   getBestBuy(sku: string): NormalizedListing | null {
-    return this.pickBest(this.buys.get(sku), (a, b) => a.priceMetal > b.priceMetal);
+    return this.pickBest(
+      this.buys.get(sku),
+      (a, b) => a.priceMetal > b.priceMetal,
+    );
   }
 
   getBestSell(sku: string): NormalizedListing | null {
-    return this.pickBest(this.sells.get(sku), (a, b) => a.priceMetal < b.priceMetal);
+    return this.pickBest(
+      this.sells.get(sku),
+      (a, b) => a.priceMetal < b.priceMetal,
+    );
   }
 
   /**
@@ -93,7 +99,7 @@ export class OrderBook {
 
   private pickBest(
     bySku: Map<string, NormalizedListing> | undefined,
-    isBetter: (a: NormalizedListing, b: NormalizedListing) => boolean
+    isBetter: (a: NormalizedListing, b: NormalizedListing) => boolean,
   ): NormalizedListing | null {
     if (!bySku || bySku.size === 0) return null;
     let best: NormalizedListing | null = null;

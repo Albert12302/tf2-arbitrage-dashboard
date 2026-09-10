@@ -4,7 +4,7 @@ import type {
   BackpackTfSocketMessage,
   NormalizedListing,
 } from "@tf2-arb/shared";
-import { buildItemSku, isTrackableVariant } from "@tf2-arb/shared";
+import { buildItemSku, isTrackableVariant, isTrackableBuyOrder } from "@tf2-arb/shared";
 import { connectBackpackSocket } from "./backpack-socket";
 import { OrderBook } from "./order-book";
 import { convertToMetal } from "./key-price";
@@ -18,6 +18,11 @@ import { DealsRepository } from "./db";
 // the table until its next event. See OrderBook.pruneStale for the full tradeoff.
 const MAX_LISTING_AGE_MS = 60 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 15 * 60 * 1000;
+
+// Below this spread, the "opportunity" is dwarfed by tf2 trading's real-world
+// friction (Steam trade holds, bots going offline, currencies.metal's own
+// 1/9-scrap rounding) and isn't worth surfacing on the dashboard.
+const MIN_PROFIT_METAL = 1;
 
 function assertEnv(name: string): string {
   const value = process.env[name];
@@ -72,7 +77,8 @@ async function reconcileSku(
   // as equal instead of manufacturing a phantom opportunity.
   const buyMetal = convertToMetal(bestBuy.currencies, orderBook);
   const sellMetal = convertToMetal(bestSell.currencies, orderBook);
-  const isProfitable = buyMetal !== null && sellMetal !== null && buyMetal > sellMetal;
+  const isProfitable =
+    buyMetal !== null && sellMetal !== null && buyMetal - sellMetal >= MIN_PROFIT_METAL;
 
   if (!isProfitable || buyMetal === null || sellMetal === null) {
     await deals.deleteIfPresent(sku);
@@ -137,6 +143,7 @@ async function handleMessage(
   if (message.event === "listing-update") {
     const payload = message.payload;
     if (!isTrackableVariant(payload.item)) return; // name tag/spells/extra strange parts — doesn't fold into item_sku
+    if (!isTrackableBuyOrder(payload.item, payload.intent)) return; // killstreak buy orders are routinely inflated/vanity-priced
 
     const priceMetal = convertToMetal(payload.currencies, orderBook);
     if (priceMetal === null) return; // can't price yet (USD-only, or no key rate discovered)
